@@ -1,0 +1,42 @@
+[project]
+name = "naman"
+version = "0.8.2"
+description = "A personal AI assistant for laptop and phone: memory, work tracking and actions, with approval for anything risky."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "groq>=1.0",
+    "langgraph>=1.0",
+    "langgraph-checkpoint-sqlite>=3.0",
+    "python-telegram-bot>=22.0",
+    "mcp>=2.0",
+    "python-dotenv>=1.0",
+    "httpx>=0.27",
+    "ddgs>=9.0",
+    "psutil>=5.9",
+    "pillow>=10.0",
+    "pycaw>=20240316; sys_platform == 'win32'",
+    "pypdf>=5.0",
+    "openpyxl>=3.1",
+    "uiautomation>=2.0.20; sys_platform == 'win32'",
+    "typer>=0.12",
+    "rich>=13.7",
+]
+
+[project.optional-dependencies]
+voice = ["faster-whisper>=1.1", "sounddevice>=0.5", "edge-tts>=7.0", "miniaudio>=1.60", "numpy>=1.26"]
+dev = ["pytest>=8", "naman[voice]"]
+
+[project.scripts]
+naman = "naman.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/naman"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

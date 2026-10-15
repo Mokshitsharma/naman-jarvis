@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.pytest_cache/
+data/
+*.egg-info/
+mcp_servers.json
+*.bak
+*.log
+.claude/
+# Personal planning notes (PRD, college project, changelog); kept local
+brain/

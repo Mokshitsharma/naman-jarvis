@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "xkcd": {
+      "enabled": false,
+      "command": "python",
+      "args": ["path/to/ToolForge/examples/xkcd/server.py"]
+    },
+    "pokeapi": {
+      "enabled": false,
+      "command": "python",
+      "args": ["path/to/ToolForge/examples/pokeapi/server.py"]
+    },
+    "files": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/Documents"],
+      "approval": "writes",
+      "tools": ["read_text_file", "list_directory", "search_files", "get_file_info", "write_file"]
+    },
+    "github": {
+      "enabled": false,
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": "<your token>"}
+    }
+  }
+}

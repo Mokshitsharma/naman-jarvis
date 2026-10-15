@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Naman Control Center</title>
+<script>
+  // Theme before first paint: saved choice, else the system's.
+  (() => { let t = null; try { t = localStorage.getItem("naman-theme"); } catch (e) {}
+    document.documentElement.dataset.theme = t || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"); })();
+</script>
+<style>
+:root, [data-theme="dark"]{
+  --bg:#0a0c16; --bg-glow1:rgba(124,92,255,.16); --bg-glow2:rgba(34,211,238,.10);
+  --surface:#11142280; --surface-solid:#121526; --surface2:#171b30; --field:#0e1120;
+  --line:#22273f; --line2:#2d3352; --text:#e8eaf5; --dim:#a0a7c4; --faint:#6c7393;
+  --accent:#8b6cff; --accent-ink:#ffffff; --accent2:#22d3ee; --accent-soft:rgba(139,108,255,.14);
+  --good:#34d399; --good-soft:rgba(52,211,153,.12); --warn:#fbbf24; --warn-soft:rgba(251,191,36,.12);
+  --bad:#f87171; --bad-soft:rgba(248,113,113,.10);
+  --shadow:0 12px 32px -16px rgba(0,0,0,.7); --ring-track:rgba(160,167,196,.14);
+}
+[data-theme="light"]{
+  --bg:#f5f6fb; --bg-glow1:rgba(99,72,240,.07); --bg-glow2:rgba(8,145,178,.06);
+  --surface:#ffffffd9; --surface-solid:#ffffff; --surface2:#f2f4fa; --field:#ffffff;
+  --line:#e4e7f1; --line2:#d5d9e8; --text:#151a2d; --dim:#4f5775; --faint:#868da8;
+  --accent:#5b3df5; --accent-ink:#ffffff; --accent2:#0891b2; --accent-soft:rgba(91,61,245,.09);
+  --good:#059669; --good-soft:rgba(5,150,105,.09); --warn:#b45309; --warn-soft:rgba(217,119,6,.10);
+  --bad:#dc2626; --bad-soft:rgba(220,38,38,.07);
+  --shadow:0 10px 28px -18px rgba(30,40,90,.35); --ring-track:rgba(79,87,117,.12);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;color:var(--text);overflow:hidden;font:14px/1.5 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  background:radial-gradient(1100px 560px at 85% -12%,var(--bg-glow1),transparent 60%),
+             radial-gradient(900px 520px at -8% 110%,var(--bg-glow2),transparent 55%),var(--bg);transition:background .25s}
+a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--text);background:var(--field);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea{resize:vertical;width:100%}
+.app{display:grid;grid-template-columns:236px 1fr;height:100vh}
+.side{background:var(--surface);backdrop-filter:blur(14px);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:18px 12px}
+.brand{display:flex;align-items:center;gap:12px;padding:4px 8px 20px}
+.orb{width:34px;height:34px;border-radius:50%;flex:none;background:radial-gradient(circle at 35% 30%,#fff 0,#c4b5fd 16%,var(--accent) 46%,#3b1fa8 80%);
+  box-shadow:0 0 24px rgba(139,108,255,.35);animation:breathe 3.4s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.06);box-shadow:0 0 30px rgba(139,108,255,.6)}}
+.brand b{font-size:15px;letter-spacing:.6px} .brand small{display:block;color:var(--faint);font-size:11px}
+.nav button{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:9px 12px;border-radius:10px;color:var(--dim);text-align:left;font-weight:550;transition:.15s;margin-bottom:2px}
+.nav button:hover{background:var(--accent-soft);color:var(--text)}
+.nav button.on{background:var(--accent-soft);color:var(--text);box-shadow:inset 3px 0 0 var(--accent)}
+.nav .count{margin-left:auto;font-size:11px;background:var(--surface2);border:1px solid var(--line);padding:0 7px;border-radius:99px;color:var(--dim)}
+.ic{width:18px;text-align:center;color:var(--accent)}
+.side .foot{margin-top:auto;padding:12px 8px 0;border-top:1px solid var(--line);font-size:12px;color:var(--faint);display:grid;gap:4px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--faint)}
+.dot.on{background:var(--good);box-shadow:0 0 8px var(--good)} .dot.busy{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.theme{display:flex;gap:4px;margin-top:8px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:3px}
+.theme button{flex:1;border:0;background:none;padding:5px 6px;border-radius:8px;color:var(--dim);font-size:12px}
+.theme button.on{background:var(--surface-solid);color:var(--text);box-shadow:var(--shadow)}
+main{overflow:auto;padding:26px 32px 100px}
+main:has(.chatpage){overflow:hidden;padding-bottom:16px}
+h1{font-size:23px;margin:0 0 4px;font-weight:700;letter-spacing:-.2px} .sub{color:var(--dim);margin:0 0 20px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--faint);margin:22px 0 10px;font-weight:650}
+.card{background:var(--surface);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:14px} .stats{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.stat{position:relative;overflow:hidden} .stat::after{content:"";position:absolute;right:-30px;bottom:-60px;width:120px;height:120px;border-radius:50%;background:var(--accent-soft)}
+.stat .n{font-size:28px;font-weight:750;letter-spacing:-.5px} .stat .l{color:var(--dim);font-size:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:8px 14px;font-weight:600;transition:.15s;white-space:nowrap;color:var(--text)}
+.btn:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);text-decoration:none}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;color:var(--accent-ink)}
+.btn.good{background:var(--good-soft);border-color:transparent;color:var(--good)}
+.btn.small{padding:4px 10px;font-size:12px} .btn.ghost{background:none;border-color:transparent;color:var(--dim)}
+.btn[disabled]{opacity:.55;cursor:wait}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:12px;background:var(--surface2);border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.chip.good{color:var(--good);background:var(--good-soft);border-color:transparent}
+.chip.warn{color:var(--warn);background:var(--warn-soft);border-color:transparent}
+.chip.accent{color:var(--accent);background:var(--accent-soft);border-color:transparent}
+.muted{color:var(--dim)} .faint{color:var(--faint)} .empty{color:var(--faint);padding:30px;text-align:center}
+.seg{display:inline-flex;background:var(--surface2);border:1px solid var(--line);border-radius:11px;padding:3px}
+.seg button{background:none;border:0;padding:5px 12px;border-radius:8px;color:var(--dim);font-weight:550}
+.seg button.on{background:var(--surface-solid);color:var(--text);box-shadow:var(--shadow)}
+.ring{--p:0;--c:var(--accent);width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:conic-gradient(var(--c) calc(var(--p)*1%),var(--ring-track) 0);position:relative;font-weight:750;font-size:13px}
+.ring::before{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--surface-solid)}
+.ring span{position:relative} .ring.big{width:76px;height:76px;font-size:21px} .ring.big::before{inset:6px}
+.jobs{display:grid;grid-template-columns:minmax(340px,430px) 1fr;gap:16px;height:calc(100vh - 215px)}
+.list{overflow:auto;padding-right:4px;display:flex;flex-direction:column;gap:8px}
+.jobcard{display:flex;gap:12px;padding:12px;border-radius:13px;border:1px solid var(--line);background:var(--surface);cursor:pointer;transition:.15s}
+.jobcard:hover{border-color:var(--line2);transform:translateX(2px)}
+.jobcard.on{border-color:var(--accent);background:var(--accent-soft)}
+.jobcard .t{font-weight:650;line-height:1.3} .jobcard .c{color:var(--dim);font-size:12.5px;margin:2px 0 6px}
+.detail{overflow:auto}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:14px 0}
+.fact{background:var(--surface2);border:1px solid var(--line);border-radius:11px;padding:10px}
+.fact .k{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--faint)} .fact .v{margin-top:2px;font-weight:550}
+.contact{background:linear-gradient(135deg,var(--accent-soft),transparent);border:1px solid var(--line2);border-radius:12px;padding:12px;white-space:pre-wrap;word-break:break-word}
+.desc{white-space:pre-wrap;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:14px}
+.rz{display:grid;gap:6px;margin-top:6px}
+.rz .r{display:grid;grid-template-columns:56px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface2)}
+.rz .r.best{border-color:var(--good);background:var(--good-soft)}
+.rz .pct{font-weight:750;font-size:16px;text-align:center}
+.reply textarea{min-height:150px;margin:8px 0}
+.removed{font-size:12px;color:var(--warn);margin-top:6px}
+.slot{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;margin-bottom:10px}
+.slot .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:13px}
+.slot textarea{min-height:90px} .slot .st{font-size:12px;margin-top:4px}
+.done .r{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--surface)}
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:8px}
+.person{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface2)} .person b{display:block}
+.posts{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.post .t{font-weight:650;margin:6px 0} .post p{color:var(--dim);margin:0 0 10px;font-size:13px}
+.co{display:grid;grid-template-columns:1.1fr 1.3fr 1.2fr;gap:14px;align-items:start}
+.co + .co{border-top:1px solid var(--line);padding-top:14px;margin-top:14px}
+.mail{display:grid;gap:8px;margin-bottom:14px}
+.mail .hdr{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center}
+.mail label{color:var(--faint);font-size:12px}
+.two{display:grid;grid-template-columns:1fr 1.3fr;gap:16px}
+.task{display:flex;gap:10px;align-items:flex-start;padding:10px;border-bottom:1px solid var(--line)} .task:last-child{border:0}
+.check{width:20px;height:20px;border-radius:6px;border:2px solid var(--line2);background:none;flex:none;margin-top:1px}
+.check:hover{border-color:var(--good);background:var(--good-soft)}
+.pri-high{color:var(--bad)} .pri-medium{color:var(--warn)} .pri-low{color:var(--faint)}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px;min-height:140px} .day.today{border-color:var(--accent)}
+.day h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--faint)}
+.block{font-size:12px;padding:6px 8px;border-radius:8px;margin-bottom:5px;background:var(--accent-soft);border-left:3px solid var(--accent);position:relative}
+.block .x{position:absolute;right:4px;top:2px;border:0;background:none;color:var(--faint);display:none} .block:hover .x{display:block}
+.form{display:grid;gap:8px} .form.inline{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));align-items:end}
+.run{border-left:3px solid var(--line2);padding-left:12px;margin-bottom:14px}
+.run.done{border-color:var(--good)} .run.failed{border-color:var(--bad)} .run.running{border-color:var(--warn)}
+.run pre{white-space:pre-wrap;background:var(--surface2);padding:10px;border-radius:10px;margin:8px 0 0}
+.mem{display:flex;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line);align-items:flex-start}
+.mem.private{background:var(--bad-soft)} .mem .x{margin-left:auto;opacity:.4} .mem:hover .x{opacity:1}
+.chatbtn{position:fixed;right:22px;bottom:22px;width:56px;height:56px;border-radius:50%;border:0;z-index:9;font-size:0;
+  background:radial-gradient(circle at 35% 30%,#fff 0,#c4b5fd 14%,var(--accent) 45%,#3b1fa8 85%);box-shadow:0 0 26px rgba(139,108,255,.55);animation:breathe 3.4s ease-in-out infinite}
+.chat{position:fixed;right:22px;bottom:90px;width:410px;max-height:70vh;display:none;flex-direction:column;z-index:10;padding:0;overflow:hidden;background:var(--surface-solid)}
+.chat.open{display:flex}
+.chat header{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:650;display:flex;align-items:center}
+.msgs{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:200px}
+.msg{padding:8px 12px;border-radius:12px;max-width:88%;white-space:pre-wrap;word-break:break-word}
+.msg.me{align-self:flex-end;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.msg.bot{align-self:flex-start;background:var(--surface2);border:1px solid var(--line)}
+.chat form{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)} .chat input{flex:1}
+.chatpage{display:flex;flex-direction:column;height:calc(100vh - 42px);max-width:880px;margin:0 auto}
+.chatpage .msgs{flex:1;overflow:auto;padding:8px 4px 18px;display:flex;flex-direction:column;gap:18px;min-height:0}
+.cm{display:flex;gap:12px;align-items:flex-start;max-width:100%}
+.cm.me{justify-content:flex-end}
+.cm .av{width:30px;height:30px;border-radius:50%;flex:none;margin-top:2px;background:radial-gradient(circle at 35% 30%,#fff 0,#a5f3fc 14%,#22d3ee 40%,#7c3aed 85%)}
+.cm .b{line-height:1.6;word-break:break-word;min-width:0}
+.cm.me .b{background:var(--surface2);border:1px solid var(--line);padding:10px 14px;border-radius:18px 18px 4px 18px;max-width:75%;white-space:pre-wrap}
+.cm.bot{width:100%} .cm.bot>div:last-child{flex:1;min-width:0}
+.cm.bot .b p{margin:0 0 8px} .cm.bot .b ul,.cm.bot .b ol{margin:4px 0 8px;padding-left:22px}
+.cm .b code{background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:1px 5px;font-size:.9em}
+.cm .b pre{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow:auto;margin:6px 0}
+.cm .b pre code{border:0;padding:0;background:none}
+.cm .tools{display:flex;gap:6px;margin-top:4px;opacity:0;transition:.15s} .cm:hover .tools{opacity:1}
+.cm .tools button{background:none;border:0;color:var(--faint);cursor:pointer;font-size:12px;padding:2px 4px} .cm .tools button:hover{color:var(--text)}
+.vtag{font-size:11px;color:var(--faint);margin-right:6px}
+.typing{display:inline-flex;gap:4px;padding:8px 0} .typing i{width:7px;height:7px;border-radius:50%;background:var(--faint);animation:bounce 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.15s} .typing i:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+.composer{border:1px solid var(--line2);background:var(--surface-solid);border-radius:20px;padding:10px 10px 10px 16px;display:flex;gap:10px;align-items:flex-end;box-shadow:var(--shadow)}
+.composer:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.composer textarea{flex:1;border:0;background:none;resize:none;min-height:24px;max-height:200px;padding:4px 0;font:inherit;color:var(--text);outline:none;box-shadow:none}
+.composer .send{width:36px;height:36px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:17px;cursor:pointer;flex:none}
+.composer .send:disabled{opacity:.35;cursor:default}
+.hello{margin:auto 0;text-align:center;padding:30px 0}
+.hello h1{font-size:28px;margin-bottom:6px}
+.sugg{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px}
+.sugg button{border:1px solid var(--line2);background:var(--surface);color:var(--dim);border-radius:999px;padding:8px 14px;cursor:pointer;font:inherit;font-size:13px}
+.sugg button:hover{border-color:var(--accent);color:var(--text)}
+.chatnote{text-align:center;font-size:11px;color:var(--faint);margin-top:6px}
+.progress{display:none;align-items:center;gap:12px;margin:14px 0 0;padding:10px 14px;border-radius:12px;
+  background:var(--accent-soft);border:1px solid var(--line2);color:var(--text)}
+.progress.on{display:flex}
+.progress .bar{flex:1;height:4px;border-radius:4px;background:var(--ring-track);overflow:hidden;position:relative;max-width:260px}
+.progress .bar::after{content:"";position:absolute;inset:0;width:40%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  animation:slide 1.4s ease-in-out infinite}
+@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+.stale{position:fixed;top:0;left:0;right:0;z-index:30;padding:10px 16px;background:var(--bad);color:#fff;text-align:center;font-weight:600}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(10px);background:var(--surface-solid);border:1px solid var(--line2);
+  padding:10px 16px;border-radius:12px;box-shadow:var(--shadow);opacity:0;transition:.25s;pointer-events:none;z-index:20}
+.toast.on{opacity:1;transform:translateX(-50%)}
+::-webkit-scrollbar{width:10px} ::-webkit-scrollbar-thumb{background:var(--line2);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
+@media (max-width:900px){.app{grid-template-columns:1fr}.side{display:none}.jobs,.two,.co{grid-template-columns:1fr;height:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><div class="orb"></div><div><b>NAMAN</b><small>control center</small></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="foot"><div id="foot"></div>
+      <div class="theme" id="theme"><button data-t="light">☀ Light</button><button data-t="dark">☾ Dark</button></div></div>
+  </aside>
+  <main id="main"></main>
+</div>
+<button class="chatbtn" id="chatbtn" title="Chat">chat</button>
+<div class="toast" id="toast"></div>
+<script>
+"use strict";
+const KEY = new URLSearchParams(location.search).get("k") || "";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+// Escape first, then turn plain URLs, emails and phone numbers into links.
+const linkify = s => esc(s)
+  .replace(/https?:\/\/[^\s<>"')]+/g, u => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`)
+  .replace(/(^|[\s(:,])([\w.+-]+@[\w-]+\.[\w.]+)/g, (m, p, e) => `${p}<a href="mailto:${e}">${e}</a>`)
+  .replace(/(^|[\s(:,])((?:\+?91[\s-]?)?[6-9]\d{4}[\s-]?\d{5})\b/g, (m, p, t) => `${p}<a href="tel:${t.replace(/[\s-]/g,"")}">${t}</a>`);
+const safeUrl = u => /^https?:\/\//i.test(u || "") ? u : "#";
+const jsStr = s => String(s ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
+function setTheme(t) { document.documentElement.dataset.theme = t; try { localStorage.setItem("naman-theme", t); } catch (e) {}
+  document.querySelectorAll("#theme button").forEach(b => b.classList.toggle("on", b.dataset.t === t)); }
+document.querySelectorAll("#theme button").forEach(b => b.onclick = () => setTheme(b.dataset.t));
+setTheme(document.documentElement.dataset.theme);
+
+async function api(path, opts = {}) {
+  const res = await fetch("/api/" + path, {method: opts.method || "GET",
+    headers: {"X-Naman-Key": KEY, "Content-Type": "application/json"}, body: opts.body ? JSON.stringify(opts.body) : undefined});
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && !document.querySelector(".stale")) {
+    document.body.insertAdjacentHTML("afterbegin", `<div class="stale">This window is out of date (Naman restarted with a new key). Close it and open the Control center from the orb again.</div>`);
+  }
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+function toast(text) { const t = $("#toast"); t.textContent = text; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 3400); }
+async function busy(btn, label, fn) { const old = btn.textContent; btn.disabled = true; btn.textContent = label;
+  try { return await fn(); } catch (e) { toast(e.message); } finally { if (btn.isConnected) { btn.disabled = false; btn.textContent = old; } } }
+const ring = (p, big) => { const c = p >= 75 ? "var(--good)" : p >= 55 ? "var(--accent)" : p >= 40 ? "var(--warn)" : "var(--faint)";
+  return `<div class="ring${big ? " big" : ""}" style="--p:${p};--c:${c}"><span>${p}</span></div>`; };
+const SRC = {pasted: "Pasted by you", linkedin: "LinkedIn job", linkedin_post: "LinkedIn post", freelancer: "Freelancer.com", truelancer: "Truelancer",
+             remotive: "Remotive", jobicy: "Jobicy"};
+const srcChip = s => `<span class="chip ${s === "linkedin_post" ? "accent" : s === "freelancer" || s === "truelancer" ? "warn" : ""}">${SRC[s] || esc(s)}</span>`;
+const where = j => esc([j.company, j.location].filter(Boolean).join(" · ") || "Company and place not named");
+const when = s => { if (!s) return ""; const d = new Date(s); if (isNaN(d)) return esc(s);
+  const h = (Date.now() - d) / 36e5; return h < 1 ? "just now" : h < 24 ? `${Math.round(h)}h ago` : `${Math.round(h / 24)}d ago`; };
+const tagChips = j => (j.fit_reasons || []).filter(r => /\+\d+$/.test(r)).map(r => `<span class="chip good">${esc(r.split(" ")[0])}</span>`).join("");
+
+const VIEWS = [["overview","◎","Overview"],["chat","✦","Chat"],["paste","＋","Paste a post"],["jobs","◆","Jobs"],["outreach","✉","Outreach"],["companies","▣","Companies"],
+               ["tech","⚡","Tech updates"],["tasks","✓","Tasks & schedule"],["builds","⌘","Claude Code"],["memory","◉","Memory"]];
+const [hashView, hashId] = location.hash.slice(1).split("/");
+let view = hashView || "overview";
+const state = {jobs: {status: hashId ? "all" : "new", where: "", min_fit: 0, q: "", source: "", sel: hashId ? +hashId : null},
+               outreach: "draft", tech: "", counts: {}};
+
+function nav() {
+  const c = state.counts, n = {jobs: c.jobs_new, outreach: c.drafts, tasks: c.tasks, memory: c.memories};
+  $("#nav").innerHTML = VIEWS.map(([id, ic, label]) => `<button class="${id === view ? "on" : ""}" onclick="go('${id}')">
+    <span class="ic">${ic}</span>${label}${n[id] ? `<span class="count">${n[id]}</span>` : ""}</button>`).join("");
+}
+function go(v) { view = v; location.hash = v; render(); }
+async function render() { nav(); $("#chatbtn").style.display = view === "chat" ? "none" : ""; const m = $("#main"); try { await RENDER[view](m); } catch (e) { m.innerHTML = `<div class="empty">Couldn't load: ${esc(e.message)}</div>`; } }
+async function refreshCounts() {
+  const o = await api("overview"); state.counts = {...o.counts, drafts: o.drafts}; nav();
+  const s = o.status; state.status = s; showProgress(s);
+  if (s.busy) watchSearch();
+  $("#foot").innerHTML = `<div><span class="dot ${s.telegram ? "on" : ""}"></span>Telegram ${s.telegram ? "connected" : "not set up"}</div>
+    <div><span class="dot ${s.busy ? "busy" : s.automation ? "on" : ""}"></span>${s.busy ? "Searching…" : s.automation ? "Automation on" : "Automation off"}</div>
+    <div class="faint">Jobs checked ${s.last_jobs ? when(s.last_jobs) : "not yet"}</div>`;
+  return o;
+}
+
+const RENDER = {
+  async overview(m) {
+    const o = await refreshCounts(), n = o.next;
+    const blk = b => b ? `<b>${esc(b.title)}</b> <span class="muted">${b.start}–${b.end}</span>` : `<span class="faint">nothing scheduled</span>`;
+    m.innerHTML = `<h1>${greet()}${o.name ? ", " + esc(o.name) : ""}</h1><p class="sub">${esc(n.time)} · ${o.counts.tasks} open tasks · ${o.counts.jobs_strong} strong job matches</p>
+      <div class="grid stats">${[["New jobs", o.counts.jobs_new, "jobs"], ["Strong matches (70+)", o.counts.jobs_strong, "jobs"], ["Email drafts", o.drafts, "outreach"],
+        ["Applied", o.counts.applied, "jobs"]]
+        .map(([l, v, to]) => `<div class="card stat" style="cursor:pointer" onclick="go('${to}')"><div class="n">${v}</div><div class="l">${l}</div></div>`).join("")}</div>
+      <div class="two" style="margin-top:14px">
+        <div class="card"><h2 style="margin-top:0">Right now</h2>
+          <div class="row"><span class="chip">Now</span>${blk(n.schedule_now)}</div>
+          <div class="row" style="margin-top:8px"><span class="chip">Next</span>${blk(n.schedule_next)}</div>
+          <h2>Pick up next</h2>
+          ${n.suggested_tasks.length ? n.suggested_tasks.map(t => `<div class="task"><button class="check" title="Done" onclick="doneTask(${t.id})"></button>
+            <div><div>${esc(t.title)}</div><div class="faint" style="font-size:12px">${esc(t.project)} · <span class="pri-${t.priority}">${t.priority}</span>${t.due ? " · due " + esc(t.due) : ""}</div></div></div>`).join("")
+            : `<div class="faint">No open tasks. Tell Jarvis what's on your plate.</div>`}</div>
+        <div class="card"><h2 style="margin-top:0">Best openings</h2>
+          ${o.top_jobs.length ? o.top_jobs.map(j => `<div class="jobcard" style="margin-bottom:8px" onclick="state.jobs.sel=${j.id};go('jobs')">${ring(j.fit)}
+            <div><div class="t">${esc(j.title)}</div><div class="c">${where(j)}</div><div class="row" style="gap:5px">${srcChip(j.source)}${tagChips(j)}</div></div></div>`).join("")
+            : `<div class="empty">No jobs yet. <button class="btn small primary" onclick="refresh('jobs')">Find jobs now</button></div>`}</div></div>
+      ${o.runs.length ? `<h2>Claude Code</h2><div class="card">${o.runs.map(runHtml).join("")}</div>` : ""}`;
+  },
+
+  async jobs(m) {
+    const f = state.jobs; refreshCounts().catch(() => {});
+    const qs = new URLSearchParams({status: f.status === "all" ? "" : f.status, where: f.where, min_fit: f.min_fit, q: f.q, source: f.source});
+    const rows = await api("jobs?" + qs);
+    if (!rows.find(r => r.id === f.sel)) f.sel = rows[0]?.id ?? null;
+    const seg = (key, opts) => `<div class="seg">${opts.map(([v, l]) => `<button class="${f[key] === v ? "on" : ""}" onclick="state.jobs.${key}='${v}';render()">${l}</button>`).join("")}</div>`;
+    m.innerHTML = `<div class="row" style="justify-content:space-between"><div><h1>Jobs</h1>
+        <p class="sub" style="margin:0">LinkedIn listings & hiring posts, Freelancer.com, Truelancer and remote boards, scored for you: near you, remote and freelance first</p></div>
+        <button class="btn primary" id="findjobs" onclick="refresh('jobs')">Find new jobs</button></div>
+      <div class="progress" id="progress"><span class="bar"></span><span id="progresstext">Searching…</span>
+        <span class="faint" style="margin-left:auto;font-size:12px">New jobs appear as they're found. A full search takes 10-20 minutes.</span></div>
+      <div class="row" style="margin:16px 0 8px">${seg("status", [["new","New"],["saved","Saved"],["applied","Applied"],["all","All"]])}
+        ${seg("where", [["","Anywhere"],["home","Near me"],["remote","Remote"],["freelance","Freelance"],["internship","Internship"]])}</div>
+      <div class="row" style="margin-bottom:16px">
+        <select onchange="state.jobs.source=this.value;render()"><option value="">All sources</option>
+          ${Object.entries(SRC).map(([k, v]) => `<option value="${k}" ${f.source === k ? "selected" : ""}>${v}</option>`).join("")}</select>
+        <label class="row muted">Fit ≥ <input type="range" min="0" max="90" step="5" value="${f.min_fit}" onchange="state.jobs.min_fit=this.value;render()"> <b>${f.min_fit}</b></label>
+        <input placeholder="Search title, company, skill, city" value="${esc(f.q)}" style="flex:1;min-width:200px" onkeydown="if(event.key==='Enter'){state.jobs.q=this.value;render()}">
+        <span class="faint">${rows.length} shown</span></div>
+      <div class="jobs"><div class="list">${rows.length ? rows.map(j => `
+        <div class="jobcard ${j.id === f.sel ? "on" : ""}" data-id="${j.id}" onclick="selJob(${j.id})">${ring(j.fit)}
+          <div style="min-width:0"><div class="t">${esc(j.title)}</div><div class="c">${where(j)}</div>
+          <div class="row" style="gap:5px">${srcChip(j.source)}${tagChips(j)}
+            ${j.salary ? `<span class="chip good">${esc(j.salary.slice(0, 26))}</span>` : ""}
+            ${j.contact ? `<span class="chip" title="Has contact details">✉</span>` : ""}
+            <span class="faint" style="font-size:11px">${when(j.posted || j.fetched)}</span></div></div></div>`).join("")
+        : `<div class="empty">No jobs match. Try "All", "Anywhere", a lower fit, or Find new jobs.</div>`}</div>
+        <div class="detail card" id="jobdetail"></div></div>`;
+    if (f.sel) selJob(f.sel);
+    showProgress(state.status);
+  },
+
+  async outreach(m) {
+    const [all, aa] = await Promise.all([api("outreach"), api("autoapply").catch(() => null)]);
+    const tab = state.outreach, rows = all.filter(r => r.status === tab);
+    const count = s => all.filter(r => r.status === s).length;
+    m.innerHTML = `<h1>Outreach</h1><p class="sub">Application emails Jarvis drafted. Read one, fix anything, then <b>Send</b>: it goes from your Gmail with the résumé attached and the job is marked Applied. (<b>Open in Gmail</b> is there if you'd rather send it by hand, then <b>Mark sent</b>.)</p>
+      ${aa ? `<div class="card row" style="margin-bottom:14px;justify-content:space-between">
+        <div><b>Auto-apply</b> <span class="chip ${aa.on ? (aa.ready ? "good" : "warn") : ""}">${aa.on ? (aa.ready ? "on" : "on, waiting for Gmail") : "off"}</span>
+          <div class="faint" style="font-size:12px;margin-top:4px">${aa.on ? `After each job search, drafts for jobs scoring ${aa.min_fit}+ are sent from your Gmail with the résumé attached (up to ${aa.per_day} a day). Drafts with an unfilled [placeholder] wait for you.` : "Drafts wait for you to press Send."}
+          ${aa.on && !aa.ready ? ` <b>To start sending: add NAMAN_GMAIL_APP_PASSWORD to .env</b> (Google account → App passwords), then restart.` : ""}</div></div>
+        <button class="btn ${aa.on ? "ghost" : "primary"}" onclick="setAutoApply(${!aa.on},this)">${aa.on ? "Turn off" : "Turn on"}</button></div>` : ""}
+      <div class="row" style="margin-bottom:16px"><div class="seg">${[["draft","Drafts"],["sent","Sent"],["skipped","Skipped"]].map(([v, l]) =>
+        `<button class="${tab === v ? "on" : ""}" onclick="state.outreach='${v}';render()">${l} (${count(v)})</button>`).join("")}</div>
+        <span class="faint">Strong new matches get drafts after each night's search, or open a job and press <b>Draft email</b>.</span>
+        ${tab === "draft" && count("draft") ? `<button class="btn primary" style="margin-left:auto" onclick="sendAll(${count("draft")},this)">➤ Send all (${count("draft")})</button>` : ""}</div>
+      ${rows.length ? rows.map(r => `<div class="card mail" id="mail${r.id}">
+        <div class="row" style="justify-content:space-between"><div class="row"><b>${esc(r.company || "—")}</b>${r.job_id ? `<a href="#jobs" onclick="state.jobs.sel=${r.job_id};state.jobs.status='all'">job #${r.job_id}</a>` : ""}</div>
+          <span class="faint" style="font-size:12px">${r.status === "sent" ? "sent " + when(r.sent_at) : "drafted " + when(r.created)}</span></div>
+        <div class="hdr"><label>To</label><input name="to_email" value="${esc(r.to_email)}" ${r.status !== "draft" ? "disabled" : ""}>
+          <label>Subject</label><input name="subject" value="${esc(r.subject)}" ${r.status !== "draft" ? "disabled" : ""}></div>
+        <textarea name="body" rows="8" ${r.status !== "draft" ? "disabled" : ""}>${esc(r.body)}</textarea>
+        <div class="row">${r.status === "draft" ? `<button class="btn primary" onclick="sendMail(${r.id},this)">➤ Send</button>
+          <button class="btn" onclick="openGmail(${r.id},this)">Open in Gmail</button>
+          <button class="btn ghost" onclick="markMail(${r.id},'sent')">Mark sent</button>
+          <button class="btn ghost" onclick="markMail(${r.id},'skipped')">Skip</button>` : `<button class="btn small ghost" onclick="markMail(${r.id},'draft')">Move back to drafts</button>`}
+          <span style="margin-left:auto" class="row">${r.attachment_name ? `<span class="chip accent">📎 ${esc(r.attachment_name)}</span>
+            <button class="btn small" onclick="showResume(${r.id})">Show résumé</button>` : `<span class="chip warn">no résumé file matched</span>`}</span></div></div>`).join("")
+        : `<div class="card empty">${tab === "draft" ? "No drafts yet. Open a job and press Draft email, or wait for tonight's search." : "Nothing here yet."}</div>`}`;
+  },
+
+  async companies(m) {
+    const rows = await api("companies");
+    m.innerHTML = `<div class="row" style="justify-content:space-between"><div><h1>Companies</h1>
+        <p class="sub" style="margin:0">Cold-email data: each company's website, the emails it publishes (hr@, careers@…) and HR / recruiters on LinkedIn. Filled automatically every night (15 companies); ✎ fixes a wrong website.</p></div>
+        <div class="row"><a class="btn" href="/api/companies.xlsx?k=${encodeURIComponent(KEY)}">⬇ Excel</a>
+        <a class="btn ghost" href="/api/companies.csv?k=${encodeURIComponent(KEY)}">CSV</a>
+        <button class="btn primary" onclick="bulkContacts(this)">Find contacts for 15 companies</button></div></div>
+      <form class="row" style="margin:16px 0" onsubmit="addCompany(event)"><input name="name" placeholder="Add a company to cold email (e.g. Zomato)" style="flex:1;max-width:420px" required><button class="btn">Add</button>
+        <span class="faint">Only addresses a company publishes are collected; personal emails are never guessed.</span></form>
+      <div class="card">${rows.length ? rows.map(c => `<div class="co">
+        <div><div class="row"><b style="font-size:15px">${esc(c.company)}</b>${c.added ? `<span class="chip accent">your list</span>` : ""}${c.best_fit ? ring(c.best_fit) : ""}</div>
+          ${c.domain ? `<a href="https://${esc(c.domain)}" target="_blank" rel="noopener noreferrer">${esc(c.domain)}</a>` : `<span class="faint">website not found yet</span>`}
+          <button class="btn small ghost" title="Wrong website? Set the right one" onclick="setSite('${esc(jsStr(c.company))}',this)">✎</button>
+          ${c.about ? `<div class="muted" style="font-size:13px;margin-top:4px">${esc(c.about)}</div>` : ""}
+          ${c.jobs.length ? `<div class="faint" style="font-size:12px;margin-top:6px">${c.jobs.length} open role${c.jobs.length > 1 ? "s" : ""}: ${c.jobs.slice(0, 3).map(j => esc(j.title)).join(", ")}</div>` : ""}</div>
+        <div>${c.emails.length ? c.emails.map(e => `<div class="row" style="gap:6px;margin-bottom:4px"><a href="mailto:${esc(e.email)}">${esc(e.email)}</a>
+          <span class="chip ${e.kind === "role" ? "good" : ""}">${e.kind === "role" ? "team inbox" : "person"}</span></div>`).join("")
+          : `<span class="faint">${c.checked ? "no published email found" : "not looked up yet"}</span>`}</div>
+        <div>${c.people.length ? c.people.map(p => `<div style="margin-bottom:6px"><a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener noreferrer"><b>${esc(p.name)}</b></a>
+          <div class="faint" style="font-size:12px">${esc(p.title)}</div></div>`).join("") : `<span class="faint">${c.checked ? "no HR profiles found" : ""}</span>`}
+          <div><button class="btn small" style="margin-top:4px" onclick="findContacts('${esc(jsStr(c.company))}',this,${c.checked ? 1 : 0})">${c.checked ? "Look again" : "Find contacts"}</button></div></div>
+      </div>`).join("") : `<div class="empty">No companies yet.</div>`}</div>`;
+  },
+
+  async paste(m) {
+    const slots = state.paste || (state.paste = [{text: "", url: "", image: ""}]);
+    const done = state.pasteDone || (state.pasteDone = []);
+    const busyNow = !!state.pasteBusy;
+    m.innerHTML = `<div class="row" style="justify-content:space-between"><div><h1>Paste a post</h1>
+        <p class="sub" style="margin:0">Found a job post yourself? Paste its text or a <b>screenshot</b> (Ctrl+V, or drop the image in), up to 10. Mario reads it, finds the role and email, scores it, writes the application and picks your best résumé. Then press <b>Apply</b>.</p>
+        <label class="row faint" style="gap:6px;margin-top:8px;font-size:13px;cursor:pointer"><input type="checkbox" ${state.pasteAuto ? "checked" : ""} onchange="setPasteAuto(this.checked)" style="width:auto">
+          Apply straight away when the post has an email (sent from your Gmail with the résumé; posts with an unfilled [placeholder] wait for you)</label></div>
+        <button class="btn primary" id="analyse" onclick="analyseAll()" ${busyNow ? "disabled" : ""}>${busyNow ? "Working…" : `${state.pasteAuto ? "Analyse & apply" : "Analyse"} ${slots.filter(filled).length || ""}`.trim()}</button></div>
+      <div class="card" style="margin-top:16px">${slots.map((s, i) => `<div class="slot" ondragover="event.preventDefault()" ondrop="dropShot(event,${i})"><div class="n">${i + 1}</div><div>
+          ${s.image ? `<div class="row" style="align-items:flex-start;gap:10px;margin-bottom:6px"><img src="${s.image}" style="max-height:140px;max-width:260px;border-radius:8px;border:1px solid var(--line)">
+            ${s.busy ? "" : `<button class="btn small ghost" onclick="state.paste[${i}].image='';render()">Remove screenshot</button>`}</div>` : ""}
+          <textarea placeholder="Paste the post's text, or a screenshot of it (Ctrl+V), or drop an image here" onpaste="pasteShot(event,${i})" oninput="state.paste[${i}].text=this.value;updAnalyse()" ${s.busy ? "disabled" : ""}>${esc(s.text)}</textarea>
+          <div class="row" style="margin-top:6px"><input placeholder="Link to the post (optional)" value="${esc(s.url)}" oninput="state.paste[${i}].url=this.value" style="flex:1" ${s.busy ? "disabled" : ""}>
+            ${s.busy ? "" : `<label class="btn small" style="cursor:pointer">📷 Screenshot<input type="file" accept="image/*" style="display:none" onchange="pickShot(this,${i})"></label>`}
+            ${slots.length > 1 && !s.busy ? `<button class="btn small ghost" onclick="state.paste.splice(${i},1);render()">Remove</button>` : ""}</div>
+          ${s.status ? `<div class="st ${s.error ? "" : "faint"}" style="${s.error ? "color:var(--bad)" : ""}">${esc(s.status)}</div>` : ""}</div></div>`).join("")}
+        ${slots.length < 10 ? `<button class="btn small" onclick="state.paste.push({text:'',url:'',image:''});render()">＋ Another post (${slots.length}/10)</button>` : `<span class="faint">10 posts at a time</span>`}</div>
+      <h2>Done (${done.length})</h2>
+      <div class="done">${done.length ? done.map((r, k) => `<div class="r">
+        <div class="row" style="align-items:flex-start;gap:14px">${ring(r.fit)}<div style="flex:1;min-width:0">
+          <div class="row" style="justify-content:space-between"><b>${esc(r.title)}</b><a href="#jobs/${r.job_id}" onclick="state.jobs.sel=${r.job_id};state.jobs.status='all'">open in Jobs →</a></div>
+          <div class="muted">${esc([r.company, r.location].filter(Boolean).join(" · ") || "Company not named")}${r.experience ? " · " + esc(r.experience) : ""}${r.salary ? " · " + esc(r.salary) : ""}</div>
+          <div class="row" style="gap:6px;margin-top:6px">${(r.fit_reasons || []).map(x => `<span class="chip ${/fits|target|\+\d/.test(x) ? "good" : /senior|outside|off-target|missing|low/.test(x) ? "warn" : ""}">${esc(x)}</span>`).join("")}</div>
+          <div class="row" style="gap:8px;margin-top:10px"><label class="faint" style="font-size:12px">To</label>
+            <input id="pto${k}" value="${esc(r.to_email || "")}" placeholder="no email in the post: type one, or reply on LinkedIn" style="flex:1;min-width:220px">
+            <input id="psub${k}" value="${esc(r.subject || "")}" placeholder="Subject" style="flex:1;min-width:200px"></div>
+          <textarea id="ptext${k}" style="min-height:120px;margin:8px 0">${esc(r.text)}</textarea>
+          <div class="row">${r.applied ? `<span class="chip good">✓ Applied: sent to ${esc(r.applied)}</span>`
+              : `<button class="btn primary" onclick="pasteApply(${k},this)">➤ Apply</button>`}
+            <button class="btn" onclick="pasteMail(${k},this)">✉ Open mail</button>
+            <button class="btn" onclick="navigator.clipboard.writeText($('#ptext${k}').value).then(()=>toast('Reply copied'))">📋 Copy reply</button>
+            ${r.resume ? `<button class="btn" onclick="fileAction('${esc(jsStr(r.resume.file))}','copy')">📎 Copy résumé <span class="faint">(${esc(r.resume.name)}, ${r.resume.score}%${r.resume.auto_tailored ? ", tailored" : ""})</span></button>
+              <button class="btn small ghost" onclick="fileAction('${esc(jsStr(r.resume.file))}','open')">Open résumé</button>` : `<span class="chip warn">no résumé found</span>`}
+            <button class="btn small ghost" style="margin-left:auto" onclick="state.pasteDone.splice(${k},1);render()">Dismiss</button></div>
+          ${r.resume && r.resume.removed && r.resume.removed.length ? `<div class="removed">The check removed ${r.resume.removed.length} unsupported claim(s) from the tailored résumé.</div>` : ""}
+        </div></div></div>`).join("") : `<div class="card empty">Analysed posts show up here, ready to apply.</div>`}</div>`;
+  },
+
+  async tech(m) {
+    const cats = ["", "AI models", "AI tools & agents", "Languages & frameworks", "Dev tools & cloud", "Industry"];
+    const r = await api("tech" + (state.tech ? "?category=" + encodeURIComponent(state.tech) : ""));
+    m.innerHTML = `<div class="row" style="justify-content:space-between"><div><h1>Tech updates</h1>
+      <p class="sub" style="margin:0">New AI models, language and framework releases and dev tools, from official blogs, the tech press and Hacker News, explained for you. Updated 3 times a day${r.last ? ` · last ${when(r.last)}` : ""}.</p></div>
+      <button class="btn primary" onclick="refresh('tech')">Refresh now</button></div>
+      <div class="seg" style="margin:14px 0">${cats.map(c => `<button class="${state.tech === c ? "on" : ""}" onclick="state.tech='${c}';render()">${c || "All"}</button>`).join("")}</div>
+      ${r.items.length ? `<div class="grid posts">${r.items.map(n => `<div class="card post">
+        <div class="row" style="gap:6px">${n.important ? `<span class="chip warn">★ Big news</span>` : ""}<span class="chip accent">${esc(n.category)}</span>
+          <span class="faint" style="font-size:12px">${esc(n.source)} · ${when(n.published)}</span></div>
+        <div class="t" style="margin-top:8px">${esc(n.headline)}</div>
+        <p>${esc(n.summary)}</p>
+        ${n.details.length ? `<ul style="margin:0 0 10px;padding-left:18px;color:var(--dim);font-size:13px;line-height:1.5">${n.details.map(d => `<li>${esc(d)}</li>`).join("")}</ul>` : ""}
+        <a href="${esc(safeUrl(n.url))}" target="_blank" rel="noopener noreferrer" style="font-size:12px">Read the source ↗</a></div>`).join("")}</div>`
+        : `<div class="card empty">${r.busy ? "Reading the news now… come back in a few minutes." : "Nothing yet. Press Refresh now: the first run takes a few minutes."}</div>`}`;
+  },
+
+  async chat(m) {
+    m.innerHTML = `<div class="chatpage"><div class="msgs" id="msgs"></div>
+      <div class="composer"><textarea id="chatin" rows="1" placeholder="Message Mario…  (Enter to send, Shift+Enter for a new line)"
+        oninput="growChat()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+        <button class="send" id="chatsend" title="Send" onclick="sendChat()">↑</button></div>
+      <div class="chatnote">Mario can make mistakes and asks before anything risky. Check important details.</div></div>`;
+    drawChat(); await loadChat(); drawChat(); $("#chatin").focus();
+  },
+
+  async tasks(m) {
+    const [t, blocks] = await Promise.all([api("tasks"), api("schedule")]);
+    const days = ["mon","tue","wed","thu","fri","sat","sun"], today = days[(new Date().getDay() + 6) % 7];
+    m.innerHTML = `<h1>Tasks & schedule</h1><p class="sub">Tell Jarvis "I finished …" on Telegram or by voice and it's ticked off here.</p>
+      <div class="two"><div><div class="card"><h2 style="margin-top:0">Open (${t.open.length})</h2>
+          ${t.open.map(x => `<div class="task"><button class="check" onclick="doneTask(${x.id})" title="Done"></button>
+            <div><div>${esc(x.title)}</div><div class="faint" style="font-size:12px">#${x.id} · ${esc(x.project)} · <span class="pri-${x.priority}">${x.priority}</span>${x.due ? " · due " + esc(x.due) : ""}</div></div></div>`).join("") || `<div class="faint">Nothing open.</div>`}
+          <form class="form inline" style="margin-top:12px" onsubmit="addTask(event)"><input name="title" placeholder="New task" required style="grid-column:1/-1">
+            <input name="project" placeholder="Project"><select name="priority"><option>high</option><option selected>medium</option><option>low</option></select>
+            <input name="due" type="date"><button class="btn primary">Add</button></form></div>
+        ${t.done.length ? `<div class="card" style="margin-top:14px"><h2 style="margin-top:0">Recently done</h2>${t.done.map(x => `<div class="faint">✓ ${esc(x.title)}</div>`).join("")}</div>` : ""}</div>
+      <div class="card"><h2 style="margin-top:0">Weekly schedule</h2>
+        <div class="week">${days.map(d => `<div class="day ${d === today ? "today" : ""}"><h4>${d}</h4>
+          ${blocks.filter(b => b.days.split(",").includes(d)).map(b => `<div class="block"><b>${b.start}–${b.end}</b><br>${esc(b.title)}<button class="x" onclick="delBlock(${b.id})">×</button></div>`).join("")}</div>`).join("")}</div>
+        <form class="form inline" style="margin-top:12px" onsubmit="addBlock(event)"><input name="title" placeholder="What (e.g. Work)" required><input name="days" placeholder="weekdays / mon,wed" required>
+          <input name="start" type="time" required><input name="end" type="time" required><button class="btn primary">Add block</button></form>
+        <p class="faint" style="font-size:12px;margin:8px 0 0">Or tell Jarvis: "Weekdays 10 to 6 I'm at work, 8 to 10 pm DSA."</p></div></div>`;
+  },
+
+  async builds(m) {
+    const runs = await api("runs");
+    m.innerHTML = `<h1>Claude Code builds</h1><p class="sub">Hand a project to Claude Code. It works on its own, commits (never pushes) and reports back here and on Telegram.</p>
+      <div class="card"><form class="form" onsubmit="startBuild(event)"><input name="folder" placeholder="Project folder, e.g. C:/code/expense-tracker" required>
+        <textarea name="instructions" rows="4" placeholder="What to build: features, stack, anything you care about" required></textarea>
+        <label class="row muted"><input type="checkbox" name="new_project" checked style="width:auto"> New project (create the folder)</label>
+        <div><button class="btn primary">Start build</button></div></form></div>
+      <h2>Runs</h2><div class="card">${runs.map(runHtml).join("") || `<div class="faint">No builds yet.</div>`}</div>`;
+  },
+
+  async memory(m) {
+    const d = await api("memory");
+    m.innerHTML = `<h1>Memory</h1><p class="sub">What Jarvis knows about you. Profile: <code>data/profile.md</code> (edit it any time). Red rows are private.</p>
+      <div class="card"><h2 style="margin-top:0">Profile</h2><div class="desc">${esc(d.profile || "No profile yet.")}</div></div>
+      <div class="card" style="margin-top:14px"><div class="row"><h2 style="margin:0">Facts (${d.memories.length})</h2>
+        <input placeholder="Filter" style="margin-left:auto" oninput="document.querySelectorAll('.mem').forEach(r=>r.style.display=r.textContent.toLowerCase().includes(this.value.toLowerCase())?'':'none')"></div>
+        ${d.memories.map(x => `<div class="mem ${x.fact.startsWith("Private:") ? "private" : ""}"><span class="faint">#${x.id}</span><span>${esc(x.fact)}</span>
+          <button class="btn small ghost x" onclick="forget(${x.id})">forget</button></div>`).join("")}</div>`;
+  },
+};
+
+function greet() { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; }
+function runHtml(r) {
+  return `<div class="run ${r.status}"><div class="row"><b>#${r.id}</b><span class="chip">${r.status}</span><span class="faint">${esc(r.project_dir)}</span>
+    <span class="faint" style="margin-left:auto;font-size:12px">${when(r.started)}</span></div>
+    <div class="muted" style="margin-top:4px">${esc(r.instructions.slice(0, 220))}</div>${r.summary ? `<pre>${esc(r.summary)}</pre>` : ""}</div>`;
+}
+function contactsHtml(c) {
+  if (!c || !c.checked) return "";
+  return `${c.about ? `<div class="muted" style="margin-bottom:6px">${esc(c.about)}</div>` : ""}
+    ${c.domain ? `<div class="faint" style="font-size:12px">Website: <a href="https://${esc(c.domain)}" target="_blank" rel="noopener noreferrer">${esc(c.domain)}</a></div>` : ""}
+    <div class="row" style="gap:6px;margin-top:6px">${c.emails.length ? c.emails.map(e => `<a class="chip ${e.kind === "role" ? "good" : ""}" href="mailto:${esc(e.email)}">${esc(e.email)}</a>`).join("") : `<span class="faint">no published email found</span>`}</div>
+    ${c.people.length ? `<div class="people">${c.people.map(p => `<div class="person"><a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener noreferrer"><b>${esc(p.name)}</b></a><span class="faint" style="font-size:12px">${esc(p.title)}</span></div>`).join("")}</div>` : ""}`;
+}
+
+async function selJob(id) {
+  state.jobs.sel = id;
+  document.querySelectorAll(".jobcard").forEach(c => c.classList.toggle("on", c.dataset.id == id));
+  const j = await api("jobs/" + id), el = $("#jobdetail");
+  if (!el) return;
+  const matched = ((j.fit_reasons.find(r => r.startsWith("skills ")) || "").split(": ")[1] || "").split(", ").filter(Boolean);
+  const isGig = j.source === "freelancer" || j.source === "truelancer", hasCo = j.company && !/client/i.test(j.company);
+  state.jobs.selUrl = safeUrl(j.url); state.jobs.selSource = j.source;
+  el.innerHTML = `<div class="row" style="align-items:flex-start;gap:16px">${ring(j.fit, true)}
+      <div style="flex:1;min-width:0"><h1 style="font-size:20px">${esc(j.title)}</h1><div class="muted">${where(j)}</div>
+      <div class="row" style="margin-top:8px;gap:6px">${j.fit_reasons.map(r => `<span class="chip ${/fits|target|\+\d/.test(r) ? "good" : /senior|outside|off-target|missing/.test(r) ? "warn" : ""}">${esc(r)}</span>`).join("")}</div></div></div>
+    ${j.summary ? `<p style="margin:14px 0 0">${esc(j.summary)}</p>` : ""}
+    <div class="facts"><div class="fact"><div class="k">Experience</div><div class="v">${esc(j.experience || "Not stated")}</div></div>
+      <div class="fact"><div class="k">${isGig ? "Budget" : "Salary"}</div><div class="v">${esc(j.salary || "Not stated")}</div></div>
+      <div class="fact"><div class="k">Work mode</div><div class="v">${esc(j.work_mode || "unknown")}</div></div>
+      <div class="fact"><div class="k">Source</div><div class="v">${SRC[j.source] || esc(j.source)} · ${when(j.posted || j.fetched)}</div></div></div>
+    <div class="row" style="margin:6px 0 16px"><a class="btn primary" href="${esc(safeUrl(j.url))}" target="_blank" rel="noopener noreferrer">${j.source === "linkedin_post" ? "Open the post" : isGig ? "Open the project" : "Open the listing"}</a>
+      <button class="btn" onclick="jobStatus(${j.id},'saved')">${j.status === "saved" ? "★ Saved" : "Save"}</button>
+      <button class="btn" onclick="jobStatus(${j.id},'applied')">${j.status === "applied" ? "✓ Applied" : "Mark applied"}</button>
+      <button class="btn ghost" onclick="jobStatus(${j.id},'hidden')">Hide</button></div>
+    <h2>Apply</h2>
+    <div class="card" style="box-shadow:none">
+      <div class="row" style="justify-content:space-between"><b>Reply to this ${j.source === "linkedin_post" ? "post" : isGig ? "project" : "job"}</b>
+        <button class="btn primary small" id="replybtn" onclick="writeReply(${j.id},this,false)">✍ Write reply</button></div>
+      <div class="reply" id="replybox"><span class="faint" style="font-size:13px">Jarvis writes the reply from your real background and picks the résumé; you copy both and paste them where you apply.</span></div>
+    </div>
+    <div class="card" style="box-shadow:none;margin-top:10px">
+      <div class="row" style="justify-content:space-between"><b>Your résumés for this job</b>
+        <button class="btn small" onclick="tailorResume(${j.id},this)">✨ Make tailored résumé</button></div>
+      <div class="rz" id="rzbox"><span class="faint">Scoring…</span></div>
+    </div>
+    <h2>Skills</h2><div class="row" style="gap:6px">${j.skills.map(s => `<span class="chip ${matched.includes(s) ? "good" : ""}">${esc(s)}</span>`).join("") || `<span class="faint">none listed</span>`}</div>
+    <h2>Contact & how to apply</h2><div class="contact">${j.contact ? linkify(j.contact) : `<span class="faint">No contact details in the post. ${isGig ? "Send a proposal on the site." : "Apply through the link, or look up the company below."}</span>`}</div>
+    ${hasCo ? `<h2>Reach ${esc(j.company)}</h2><div id="cobox" class="card" style="box-shadow:none"><span class="faint">Checking…</span></div>` : ""}
+    <h2>${j.source === "linkedin_post" ? "Full post" : isGig ? "Project description" : "Job description"}</h2><div class="desc">${linkify(j.description || "No description.")}</div>`;
+  loadResumes(j.id);
+  api(`jobs/${j.id}/reply`).then(r => { if (r && r.text) showPostReply(j.id, r); }).catch(() => {});
+  if (hasCo) {
+    const c = await api("contacts?cached=1&company=" + encodeURIComponent(j.company));
+    const box = $("#cobox"); if (!box) return;
+    box.innerHTML = (c && c.checked ? contactsHtml(c) : `<span class="faint">Not looked up yet.</span>`) +
+      `<div style="margin-top:8px"><button class="btn small" onclick="coLookup('${esc(jsStr(j.company))}',this,${c && c.checked ? 1 : 0})">${c && c.checked ? "Look again" : "Find contacts (about a minute)"}</button></div>`;
+  }
+}
+// --- résumés and replies -------------------------------------------------------------------
+async function loadResumes(id, note) {
+  const box = $("#rzbox"); if (!box) return;
+  let rows; try { rows = await api(`jobs/${id}/resumes`); } catch (e) { box.innerHTML = `<span class="faint">${esc(e.message)}</span>`; return; }
+  if (!$("#rzbox")) return;
+  box.innerHTML = (rows.length ? rows.slice(0, 6).map((r, i) => `<div class="r ${i === 0 ? "best" : ""}">
+      <div class="pct" style="color:${r.score >= 75 ? "var(--good)" : r.score >= 55 ? "var(--accent)" : "var(--warn)"}">${r.score}%</div>
+      <div style="min-width:0"><div><b>${esc(r.name)}</b> ${r.tailored ? `<span class="chip accent">tailored</span>` : ""} ${i === 0 ? `<span class="chip good">best</span>` : ""}</div>
+        <div class="faint" style="font-size:12px">${r.missing.length ? "missing: " + esc(r.missing.slice(0, 6).join(", ")) : "has every keyword"}</div></div>
+      <div class="row" style="gap:6px"><button class="btn small ghost" onclick="fileAction('${esc(jsStr(r.file))}','open')">Open</button></div></div>`).join("")
+    : `<span class="faint">No résumés found. Set "resume_files" in data/outreach.json.</span>`) + (note || "");
+}
+async function tailorResume(id, btn) { await busy(btn, "Writing… (~1 min)", async () => {
+  const r = await api(`jobs/${id}/tailor`, {method: "POST"});
+  const note = r.removed && r.removed.length ? `<div class="removed">The check removed ${r.removed.length} thing${r.removed.length > 1 ? "s" : ""} your material doesn't support:<br>${r.removed.slice(0, 6).map(x => "· " + esc(x.slice(0, 160))).join("<br>")}</div>` : "";
+  toast(`Tailored résumé: ${r.score}% match`); await loadResumes(id, note); }); }
+async function writeReply(id, btn, fresh) { await busy(btn, "Writing… (up to a minute if a résumé has to be tailored)", async () => {
+  showPostReply(id, await api(`jobs/${id}/reply`, {method: "POST", body: {refresh: fresh}})); loadResumes(id); }); }
+function showPostReply(id, r) {
+  const box = $("#replybox"); if (!box) return;
+  const res = r.resume;
+  box.innerHTML = `<div class="faint" style="font-size:12px;margin-top:6px">For ${esc(r.channel || "the application")}${r.subject ? ` · subject: <b>${esc(r.subject)}</b>` : ""}${/\[[^\]]+\]/.test(r.text) ? ` · <span style="color:var(--warn)">fill in the [brackets] first</span>` : ""}</div>
+    <div class="row" style="margin-top:8px;gap:8px"><label class="faint" style="font-size:12px">To</label>
+      <input id="replyto" value="${esc(r.to_email || "")}" placeholder="no email in the post: Find contacts below, or type one" style="flex:1;min-width:220px">
+      <input id="replysubject" value="${esc(r.subject || "")}" placeholder="Subject" style="flex:1;min-width:200px"></div>
+    <textarea id="replytext">${esc(r.text)}</textarea>
+    <div class="row"><button class="btn primary" onclick="sendReply(${id},this)">➤ Send</button>
+      <button class="btn" onclick="openMail(${id},this)">✉ Open mail</button>
+      <button class="btn" id="marksent" style="display:none" onclick="mailSent(this)">✓ Mark sent</button>
+      <button class="btn" onclick="copyReply()">📋 Copy reply</button>
+      ${res ? `<button class="btn" onclick="fileAction('${esc(jsStr(res.file))}','copy')">📎 Copy résumé <span class="faint">(${esc(res.name)}, ${res.score}%)</span></button>` : `<span class="chip warn">no résumé found</span>`}
+      ${res && res.auto_tailored ? `<span class="chip accent" title="Your résumés scored below the threshold for this job">tailored for this job</span>` : ""}
+      <button class="btn small ghost" style="margin-left:auto" onclick="writeReply(${id},this,true)">↻ New version</button></div>
+    <div class="faint" style="font-size:12px;margin-top:6px"><b>Open mail</b>: Gmail opens with the address, subject and reply filled in, and the résumé is on your clipboard: press Ctrl+V in the email to attach it. For LinkedIn or WhatsApp: Copy reply, paste, then Copy résumé and paste.</div>`;
+}
+async function openMail(id, btn) { await busy(btn, "Opening…", async () => {
+  const r = await api(`jobs/${id}/mail`, {method: "POST", body: {to_email: $("#replyto").value.trim(),
+    subject: $("#replysubject").value.trim(), text: $("#replytext").value}});
+  window.open(r.gmail_url, "_blank", "noopener");
+  state.mailItem = r.id; const m = $("#marksent"); if (m) m.style.display = "";
+  toast(r.resume ? `Gmail is open. Résumé copied (${r.resume.name}): press Ctrl+V in the email to attach it.` : "Gmail is open. No résumé found to attach.");
+}); }
+async function sendReply(id, btn) { const to = $("#replyto").value.trim(), subject = $("#replysubject").value.trim(), text = $("#replytext").value;
+  if (!to) { toast("No address: type one in, or use Find contacts."); return; }
+  if (/\[[^\]\n]{2,40}\]/.test(subject + "\n" + text)) { toast("Fill in the [brackets] first."); return; }
+  if (!confirm(`Send this email to ${to} with the résumé attached?`)) return;
+  await busy(btn, "Sending…", async () => {
+    const m = await api(`jobs/${id}/mail`, {method: "POST", body: {to_email: to, subject, text}});
+    const r = await api(`outreach/${m.id}/send`, {method: "POST"});
+    toast(`Sent to ${r.to_email}${r.attached ? ` with ${r.attached}` : ""}. The job is now Applied.`); }); }
+async function mailSent(btn) { if (!state.mailItem) return;
+  await busy(btn, "Saving…", async () => { await api(`outreach/${state.mailItem}/mark`, {method: "POST", body: {status: "sent"}});
+    toast("Marked sent: the job is now Applied."); btn.style.display = "none"; }); }
+function updAnalyse() { const b = $("#analyse"); if (b && !state.pasteBusy) { const n = state.paste.filter(filled).length, l = state.pasteAuto ? "Analyse & apply" : "Analyse"; b.textContent = n ? `${l} ${n}` : l; } }
+const filled = s => !!(s.text.trim() || s.image);
+try { state.pasteAuto = localStorage.getItem("pasteAuto") === "1"; } catch (e) {}
+function setPasteAuto(on) { state.pasteAuto = on; try { localStorage.setItem("pasteAuto", on ? "1" : "0"); } catch (e) {} render(); }
+function shrinkShot(file) { return new Promise((ok, fail) => { const img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url); ok(c.toDataURL("image/jpeg", 0.88)); };
+  img.onerror = () => fail(new Error("not an image")); img.src = url; }); }
+async function setShot(i, file) { try { state.paste[i].image = await shrinkShot(file); render(); toast("Screenshot added"); } catch (e) { toast(e.message); } }
+function pasteShot(e, i) { const f = [...(e.clipboardData || {}).items || []].find(x => x.type.startsWith("image/")); if (f) { e.preventDefault(); setShot(i, f.getAsFile()); } }
+function dropShot(e, i) { e.preventDefault(); const f = [...e.dataTransfer.files].find(x => x.type.startsWith("image/")); if (f) setShot(i, f); }
+function pickShot(input, i) { if (input.files[0]) setShot(i, input.files[0]); }
+async function applyPasted(r, to, subject, text) {
+  const m = await api(`jobs/${r.job_id}/mail`, {method: "POST", body: {to_email: to, subject, text}});
+  const s = await api(`outreach/${m.id}/send`, {method: "POST"});
+  r.applied = s.to_email; toast(`Applied: ${r.title} → ${s.to_email}${s.attached ? ` with ${s.attached}` : ""}`); }
+async function pasteApply(k, btn) { const r = state.pasteDone[k], to = $("#pto" + k).value.trim(), subject = $("#psub" + k).value.trim(), text = $("#ptext" + k).value;
+  if (!to) { toast("No email in the post: type one in, or reply on LinkedIn."); return; }
+  if (/\[[^\]\n]{2,40}\]/.test(subject + "\n" + text)) { toast("Fill in the [brackets] first."); return; }
+  if (!confirm(`Send this application to ${to} with ${r.resume ? r.resume.name : "your résumé"} attached?`)) return;
+  await busy(btn, "Sending…", async () => { await applyPasted(r, to, subject, text); render(); }); }
+async function analyseAll() {
+  if (state.pasteBusy) return;
+  state.pasteBusy = true; render();
+  try {
+    for (const slot of state.paste.filter(filled)) {
+      slot.busy = true; slot.error = false; slot.status = "Reading the post, scoring it, writing the reply, choosing your résumé… (up to ~1 min)"; render();
+      try {
+        const r = await api("paste", {method: "POST", body: {text: slot.text, url: slot.url, image: slot.image || ""}});
+        state.pasteDone.unshift(r);
+        slot.done = true;  // the slot turns vacant
+        if (state.pasteAuto && r.to_email && !/\[[^\]\n]{2,40}\]/.test((r.subject || "") + "\n" + r.text)) {
+          slot.status = "Applying…"; render();
+          try { await applyPasted(r, r.to_email, r.subject, r.text); } catch (e) { toast(`${r.title}: not sent (${e.message})`); }
+        }
+      } catch (e) { slot.busy = false; slot.error = true; slot.status = "Couldn't analyse this one: " + e.message; }
+      state.paste = state.paste.filter(s => !s.done);
+      if (!state.paste.length) state.paste.push({text: "", url: "", image: ""});
+      render();
+    }
+  } finally { state.pasteBusy = false; render(); refreshCounts().catch(() => {}); }
+  toast("Done: the posts are saved in Jobs, replies and résumés are ready below.");
+}
+async function pasteMail(k, btn) { const r = state.pasteDone[k];
+  await busy(btn, "Opening…", async () => {
+    const m = await api(`jobs/${r.job_id}/mail`, {method: "POST", body: {to_email: $("#pto" + k).value.trim(),
+      subject: $("#psub" + k).value.trim(), text: $("#ptext" + k).value}});
+    window.open(m.gmail_url, "_blank", "noopener");
+    toast(m.resume ? `Gmail is open. Résumé copied (${m.resume.name}): press Ctrl+V in the email to attach it.` : "Gmail is open.");
+  }); }
+async function copyReply() {
+  const text = $("#replytext").value;
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) { $("#replytext").select(); document.execCommand("copy"); }
+  toast("Reply copied. Paste it with Ctrl+V.");
+}
+async function fileAction(path, action) {
+  try { await api("file", {method: "POST", body: {path, action}});
+    toast(action === "open" ? "Opening the PDF…" : "Résumé file copied. Paste it with Ctrl+V to attach it.");
+  } catch (e) { toast(e.message); }
+}
+function openJobLink(e) { e.preventDefault(); if (state.jobs.selUrl) window.open(state.jobs.selUrl, "_blank", "noopener"); }
+
+async function coLookup(company, btn, again) { await busy(btn, "Searching…", async () => {
+  const c = await api(`contacts?company=${encodeURIComponent(company)}${again ? "&refresh=1" : ""}`);
+  $("#cobox").innerHTML = contactsHtml(c) || `<span class="faint">Nothing published found.</span>`; }); }
+async function findContacts(company, btn, again) { await busy(btn, "Searching…", async () => {
+  await api(`contacts?company=${encodeURIComponent(company)}${again ? "&refresh=1" : ""}`); render(); }); }
+async function setSite(company, btn) {
+  const domain = prompt(`Website of ${company} (e.g. rapido.bike):`); if (!domain) return;
+  await busy(btn, "…", async () => { await api("companies", {method: "POST", body: {name: company, domain}});
+    toast("Looked up again on " + domain); render(); }); }
+async function bulkContacts(btn) { await busy(btn, "Starting…", async () => { const r = await api("contacts", {method: "POST", body: {limit: 15}});
+  toast(r.started ? `Looking up ${r.started} companies in the background (a few minutes).` : "Every company is already looked up."); }); }
+async function addCompany(e) { e.preventDefault(); await api("companies", {method: "POST", body: {name: e.target.name.value}}); toast("Added"); render(); }
+async function draftMail(id, btn) { await busy(btn, "Writing…", async () => {
+  await api("outreach", {method: "POST", body: {job_id: id}}); toast("Draft ready in Outreach"); state.outreach = "draft"; go("outreach"); }); }
+async function saveMail(id) { const box = $("#mail" + id);
+  await api("outreach/" + id, {method: "POST", body: {to_email: box.querySelector("[name=to_email]").value,
+    subject: box.querySelector("[name=subject]").value, body: box.querySelector("[name=body]").value}}); }
+async function sendAll(n, btn) {
+  if (!confirm(`Send all ${n} drafts from your Gmail, each with its résumé attached? Drafts with an unfilled [placeholder] are kept back.`)) return;
+  await busy(btn, `Sending… (about ${Math.ceil(n * 2.5)} s)`, async () => {
+    const r = await api("outreach/sendall", {method: "POST"});
+    toast(`Sent ${r.sent.length}` + (r.skipped.length ? `, ${r.skipped.length} kept back (${r.skipped.map(x => x.company + ": " + x.why).join("; ").slice(0, 160)})` : "") + (r.stopped ? `. Stopped: ${r.stopped}` : "."));
+    render(); }); }
+async function setAutoApply(on, btn) { await busy(btn, "Saving…", async () => {
+  await api("autoapply", {method: "POST", body: {on}}); toast(on ? "Auto-apply on" : "Auto-apply off"); render(); }); }
+async function sendMail(id, btn) { const box = $("#mail" + id), to = box.querySelector("[name=to_email]").value;
+  if (/\[[^\]\n]{2,40}\]/.test(box.querySelector("[name=subject]").value + "\n" + box.querySelector("[name=body]").value)) { toast("Fill in the [brackets] first."); return; }
+  if (!confirm(`Send this email to ${to} with the résumé attached?`)) return;
+  await busy(btn, "Sending…", async () => { await saveMail(id); const r = await api(`outreach/${id}/send`, {method: "POST"});
+    toast(`Sent to ${r.to_email}${r.attached ? ` with ${r.attached}` : ""}. The job is now Applied.`); render(); }); }
+async function openGmail(id, btn) { await busy(btn, "Opening…", async () => { await saveMail(id);
+  const item = (await api("outreach")).find(r => r.id === id); window.open(item.gmail_url, "_blank", "noopener"); toast("Attach the résumé in Gmail, send, then Mark sent."); }); }
+async function markMail(id, status) { if ($("#mail" + id) && status !== "draft") await saveMail(id).catch(() => {});
+  await api(`outreach/${id}/mark`, {method: "POST", body: {status}}); toast(status === "sent" ? "Marked sent: the job is now Applied" : status === "skipped" ? "Skipped" : "Back in drafts"); render(); }
+async function showResume(id) { try { await api(`outreach/${id}/resume`, {method: "POST"}); } catch (e) { toast(e.message); } }
+async function jobStatus(id, status) { await api("jobs/" + id, {method: "POST", body: {status}}); toast(`Marked ${status}`); render(); }
+async function postStatus(id, status) { await api("posts/" + id, {method: "POST", body: {status}}); toast(status === "saved" ? "Saved" : "Hidden"); render(); }
+async function doneTask(id) { await api(`tasks/${id}/done`, {method: "POST"}); toast("Nice. Ticked off."); render(); }
+async function addTask(e) { e.preventDefault(); await api("tasks", {method: "POST", body: Object.fromEntries(new FormData(e.target))}); toast("Task added"); render(); }
+async function addBlock(e) { e.preventDefault(); try { await api("schedule", {method: "POST", body: Object.fromEntries(new FormData(e.target))}); toast("Added to your week"); render(); } catch (err) { toast(err.message); } }
+async function delBlock(id) { await api("schedule/" + id, {method: "DELETE"}); render(); }
+async function forget(id) { if (!confirm("Forget this fact?")) return; await api("memory/" + id, {method: "DELETE"}); render(); }
+async function startBuild(e) { e.preventDefault(); const f = Object.fromEntries(new FormData(e.target)); f.new_project = !!f.new_project;
+  const r = await api("runs", {method: "POST", body: f}); toast(r.message.slice(0, 120)); render(); }
+async function refresh(what) {
+  try { const r = await api("refresh", {method: "POST", body: {what}});
+    toast(r.started ? (what === "jobs" ? "Search started. Progress shows on the Jobs page." : what === "tech" ? "Reading the latest tech news… (a few minutes)" : "Fetching posts…") : "A search is already running: see the progress bar");
+    state.status = {...(state.status || {}), busy: true, progress: "Starting the search"}; showProgress(state.status); watchSearch();
+  } catch (e) { toast(e.message); }
+}
+function showProgress(s) {
+  const bar = $("#progress"), btn = $("#findjobs");
+  if (bar) { bar.classList.toggle("on", !!(s && s.busy)); $("#progresstext").textContent = (s && s.progress) || "Working…"; }
+  if (btn) { btn.disabled = !!(s && s.busy); btn.textContent = s && s.busy ? "Searching…" : "Find new jobs"; }
+}
+let watching = null, lastReload = 0;
+function watchSearch() {
+  if (watching) return;
+  watching = setInterval(async () => {
+    let o; try { o = await api("overview"); } catch (e) { return; }
+    state.counts = {...o.counts, drafts: o.drafts}; state.status = o.status; nav(); showProgress(o.status);
+    if (view === "jobs" && Date.now() - lastReload > 30000) { lastReload = Date.now(); reloadJobList(); }
+    if (!o.status.busy) {
+      clearInterval(watching); watching = null;
+      const n = o.status.last_added;
+      toast(n != null ? `Search finished: ${n} new job${n === 1 ? "" : "s"}.` : "Search finished.");
+      render();
+    }
+  }, 4000);
+}
+async function reloadJobList() {  // new jobs show up during a search without losing the open job
+  const f = state.jobs, list = $(".list");
+  if (!list) return;
+  const qs = new URLSearchParams({status: f.status === "all" ? "" : f.status, where: f.where, min_fit: f.min_fit, q: f.q, source: f.source});
+  const rows = await api("jobs?" + qs), top = list.scrollTop;
+  list.innerHTML = rows.map(j => `<div class="jobcard ${j.id === f.sel ? "on" : ""}" data-id="${j.id}" onclick="selJob(${j.id})">${ring(j.fit)}
+    <div style="min-width:0"><div class="t">${esc(j.title)}</div><div class="c">${where(j)}</div>
+    <div class="row" style="gap:5px">${srcChip(j.source)}${tagChips(j)}${j.salary ? `<span class="chip good">${esc(j.salary.slice(0, 26))}</span>` : ""}
+    ${j.contact ? `<span class="chip" title="Has contact details">✉</span>` : ""}<span class="faint" style="font-size:11px">${when(j.posted || j.fetched)}</span></div></div></div>`).join("");
+  list.scrollTop = top;
+}
+$("#chatbtn").onclick = () => go("chat");
+function md(text) {
+  // A small, safe Markdown: everything is escaped first, then code, bold, links and lists.
+  const blocks = [];
+  let h = esc(text || "").replace(/```\w*\n?([\s\S]*?)```/g, (_, c) => { blocks.push(`<pre><code>${c.replace(/\n$/, "")}</code></pre>`); return `\u0000${blocks.length - 1}\u0000`; });
+  h = h.replace(/`([^`\n]+)`/g, "<code>$1</code>").replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>")
+       .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+       .replace(/(?<!href=")(https?:\/\/[^\s<"]+[^\s<".,;:!?)])/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+  const out = []; let list = null;
+  for (const line of h.split("\n")) {
+    const m = line.match(/^\s*(?:([-*•])|(\d+)[.)])\s+(.*)$/);
+    if (m) { const tag = m[1] ? "ul" : "ol"; if (!list || list.tag !== tag) { if (list) out.push(`</${list.tag}>`); list = {tag}; out.push(`<${tag}>`); } out.push(`<li>${m[3]}</li>`); continue; }
+    if (list) { out.push(`</${list.tag}>`); list = null; }
+    const head = line.match(/^#{1,4}\s+(.*)$/);
+    out.push(head ? `<p><b>${head[1]}</b></p>` : line.trim() ? `<p>${line}</p>` : "");
+  }
+  if (list) out.push(`</${list.tag}>`);
+  return out.join("").replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[+i]);
+}
+const chat = {messages: [], approval: null, busy: false, loaded: false};
+function bubble(m, i) {
+  if (m.role === "user") return `<div class="cm me"><div class="b">${m.voice ? `<span class="vtag">🎙 voice</span>` : ""}${esc(m.text)}</div></div>`;
+  return `<div class="cm bot"><div class="av"></div><div style="min-width:0"><div class="b">${md(m.text)}</div>
+    <div class="tools"><button onclick="copyMsg(${i},this)">Copy</button></div></div></div>`;
+}
+function drawChat() {
+  const box = $("#msgs"); if (!box) return;
+  const near = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+  const hello = `<div class="hello"><h1>${greet()}. What can I do?</h1><div class="faint">Same conversation as voice and Telegram: Mario can search jobs, apply, read your screen, plan your day and more.</div>
+    <div class="sugg">${["What's on my plate today?", "Show remote jobs above 70", "What's new in AI this week?", "Draft an application for my best new job", "Any replies from companies?", "Remind me at 6 pm to prepare for interviews"]
+      .map(q => `<button onclick="sendChat(${esc(JSON.stringify(q))})">${esc(q)}</button>`).join("")}</div></div>`;
+  let html = chat.messages.length ? chat.messages.map(bubble).join("") : hello;
+  if (chat.approval) html += `<div class="cm bot"><div class="av"></div><div class="card" style="padding:12px 14px"><b>Mario wants to:</b> ${esc(chat.approval.tool || "")}
+    <div class="faint" style="font-size:12px;margin:4px 0 8px;word-break:break-all">${esc(JSON.stringify(chat.approval.args || {}))}</div>
+    <div class="row"><button class="btn small primary" onclick="answer(true,this)">Approve</button><button class="btn small" onclick="answer(false,this)">Deny</button></div></div></div>`;
+  if (chat.busy) html += `<div class="cm bot"><div class="av"></div><div class="typing"><i></i><i></i><i></i></div></div>`;
+  box.innerHTML = html;
+  if (near || chat.busy) box.scrollTop = box.scrollHeight;
+  const send = $("#chatsend"); if (send) send.disabled = chat.busy;
+}
+async function loadChat() {
+  const r = await api("history"); const changed = r.messages.length !== chat.messages.length || !!r.approval !== !!chat.approval;
+  chat.messages = r.messages; chat.approval = r.approval; chat.loaded = true; if (changed) drawChat();
+}
+async function sendChat(text) {
+  const box = $("#chatin"); text = (text ?? box.value).trim(); if (!text || chat.busy) return;
+  box.value = ""; growChat(); chat.messages.push({role: "user", text}); chat.busy = true; drawChat();
+  try { const r = await api("ask", {method: "POST", body: {text}});
+    chat.busy = false; if (r.approval) chat.approval = r.approval; else chat.messages.push({role: "assistant", text: r.text || "(done)"});
+  } catch (err) { chat.busy = false; chat.messages.push({role: "assistant", text: "Couldn't reach Mario: " + err.message}); }
+  drawChat(); refreshCounts().catch(() => {});
+}
+async function answer(ok, btn) { btn.disabled = true; chat.approval = null; chat.busy = true; drawChat();
+  try { const r = await api("resume", {method: "POST", body: {approved: ok}}); chat.busy = false;
+    if (r.approval) chat.approval = r.approval; else chat.messages.push({role: "assistant", text: r.text || "(done)"}); }
+  catch (err) { chat.busy = false; chat.messages.push({role: "assistant", text: "Couldn't reach Mario: " + err.message}); }
+  drawChat(); }
+async function copyMsg(i, btn) { try { await navigator.clipboard.writeText(chat.messages[i].text); btn.textContent = "Copied ✓"; setTimeout(() => btn.textContent = "Copy", 1400); } catch (e) { toast("Couldn't copy"); } }
+function growChat() { const t = $("#chatin"); if (t) { t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 200) + "px"; } }
+setInterval(() => { if (view === "chat" && !chat.busy && document.visibilityState === "visible") loadChat().catch(() => {}); }, 6000);
+
+addEventListener("hashchange", () => { const v = location.hash.slice(1).split("/")[0]; if (v && v !== view) { view = v; render(); } });
+refreshCounts().catch(() => {}); render(); setInterval(() => { if (view === "overview") render(); }, 60000);
+</script>
+</body>
+</html>
